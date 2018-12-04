@@ -1,5 +1,6 @@
 // Require dependencies
 const uuid   = require('uuid');
+const money  = require('money-math');
 const stripe = require('stripe');
 
 // Require local dependencies
@@ -9,7 +10,11 @@ const config = require('config');
 const PaymentMethodController = require('payment/controllers/method');
 
 // Require models
-const Data = model('stripe');
+const Data    = model('stripe');
+const Product = model('product');
+
+// require helpers
+const ProductHelper = helper('product');
 
 /**
  * Create Stripe Controller class
@@ -309,6 +314,11 @@ class StripeController extends PaymentMethodController {
     // Check source
     if (!source) return;
 
+    // get invoice details
+    let invoice       = await payment.get('invoice');
+    let order         = await invoice.get('order');
+    let subscriptions = await order.get('subscriptions');
+
     // Get currency
     const currency = payment.get('currency').toLowerCase() || 'usd';
 
@@ -317,9 +327,138 @@ class StripeController extends PaymentMethodController {
 
     // Run try/catch
     try {
+      // get real total
+      let realTotal = payment.get('amount');
+
+      // get subscriptions
+      if (subscriptions && subscriptions.length) {
+        // let items
+        let subscriptionItems = (await Promise.all(invoice.get('lines').map(async (line) => {
+          // get product
+          let product = await Product.findById(line.product);
+
+          // get price
+          let price = await ProductHelper.price(product, line.opts || {});
+
+          // return value
+          let amount = parseFloat(price.amount) * parseInt(line.qty || 1);
+
+          // hook
+          await this.eden.hook('line.price', {
+            'qty'  : line.qty,
+            'user' : await order.get('user'),
+            'opts' : line.opts,
+
+            order,
+            price,
+            amount,
+            product
+          });
+
+          // return object
+          return {
+            'sku'      : product.get('sku') + (Object.values(line.opts || {})).join('_'),
+            'name'     : product.get('title.en-us'),
+            'type'     : product.get('type'),
+            'price'    : money.floatToAmount(parseFloat(price.amount)),
+            'amount'   : amount,
+            'period'   : (line.opts || {}).period,
+            'product'  : product.get('_id').toString(),
+            'currency' : payment.get('currency') || 'USD',
+            'quantity' : parseInt(line.qty || 1)
+          };
+        }))).filter((item) => item.type === 'subscription');
+
+        // remove from total
+        let subscriptionTotal = parseFloat(subscriptionItems.reduce((accum, item) => {
+          // add amount
+          return money.add(accum, money.floatToAmount(parseFloat(item.price) * item.quantity));
+        }, '0.00'));
+
+        // remove amount
+        realTotal -= subscriptionTotal;
+
+        // set periods
+        let periods = {
+          'weekly' : {
+            'interval'      : 'week',
+            'interval_count' : 1
+          },
+          'monthly' : {
+            'interval'       : 'month',
+            'interval_count' : 1
+          },
+          'quarterly' : {
+            'interval'       : 'month',
+            'interval_count' : 3
+          },
+          'biannually' : {
+            'interval'       : 'month',
+            'interval_count' : 6
+          },
+          'annually' : {
+            'interval'       : 'year',
+            'interval_count' : 1
+          }
+        };
+
+        console.log(subscriptionItems);
+
+        // loop subscriptions
+        await Promise.all(subscriptions.map(async (subscription) => {
+          // find item
+          let item = subscriptionItems.find((i) => i.product = subscription.get('product.id') && i.period === subscription.get('period'));
+
+          // create plan
+          let plan = await this._stripe.plans.create({
+            'amount'   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? parseInt(item.price) : parseInt(parseFloat(item.price) * 100),
+            'product'  : {
+              'name' : 'Subscription #' + subscription.get('_id').toString()
+            },
+            'interval'       : periods[item.period].interval,
+            'currency'       : item.currency,
+            'interval_count' : periods[item.period].interval_count
+          });
+
+          // set stripe
+          subscription.set('plan', plan);
+        }));
+
+        // create actual subscription
+        let charge = await this._stripe.subscriptions.create({
+          'items' : subscriptions.map((subscription) => {
+            return {
+              'plan' : subscription.get('plan.id')
+            };
+          }),
+          'customer' : source.customer
+        });
+
+        // loop subscriptions again
+        subscriptions.forEach((subscription) => {
+          // set paypal
+          subscription.set('state',   'active');
+          subscription.set('charge',  charge);
+          subscription.set('method',  'stripe');
+          subscription.set('started', new Date());
+
+          // save subscription
+          subscription.save();
+        });
+      }
+
+      // check amount
+      if (!realTotal || realTotal < 0) {
+        // Set complete
+        payment.set('complete', true);
+
+        // return
+        return;
+      }
+
       // create data
       const data = {
-        'amount'      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? payment.get('amount') : (payment.get('amount') * 100),
+        'amount'      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
         'currency'    : currency,
         'description' : 'Payment ID ' + payment.get('_id').toString()
       };
@@ -345,6 +484,7 @@ class StripeController extends PaymentMethodController {
       // Set complete
       payment.set('complete', true);
     } catch (e) {
+      console.log(e);
       // Set error
       payment.set('error', {
         'id'   : 'stipe.error',
