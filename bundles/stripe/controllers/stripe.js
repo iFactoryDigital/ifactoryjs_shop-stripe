@@ -402,8 +402,6 @@ class StripeController extends PaymentMethodController {
           }
         };
 
-        console.log(subscriptionItems);
-
         // loop subscriptions
         await Promise.all(subscriptions.map(async (subscription) => {
           // find item
@@ -434,17 +432,14 @@ class StripeController extends PaymentMethodController {
           'customer' : source.customer
         });
 
-        // loop subscriptions again
-        subscriptions.forEach((subscription) => {
+        // loop subscriptions
+        await Promise.all(subscriptions.map(async (subscription) => {
           // set paypal
-          subscription.set('state',   'active');
-          subscription.set('charge',  charge);
-          subscription.set('method',  'stripe');
-          subscription.set('started', new Date());
+          subscription.set('charge', charge);
 
           // save subscription
-          subscription.save();
-        });
+          await subscription.save();
+        }));
       }
 
       // check amount
@@ -484,7 +479,6 @@ class StripeController extends PaymentMethodController {
       // Set complete
       payment.set('complete', true);
     } catch (e) {
-      console.log(e);
       // Set error
       payment.set('error', {
         'id'   : 'stipe.error',
