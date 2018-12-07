@@ -1,18 +1,26 @@
 <stripe-method>
   <a href="#!" onclick={ onSelect }>
-    <div class="custom-control custom-radio">
-      <input name="payment-method-{ Math.random () }" value="stripe" type="radio" class="custom-control-input" checked={ this.selected && (!Object.keys (opts.val).length || opts.val.type === 'stripe') }>
-      <label class="custom-control-label pl-2">{ this.t ('stripe.method') }</label>
+    <div class="row">
+      <div class="col-8 d-flex align-items-center">
+        <div class="w-100">
+          <div class="custom-control custom-radio p-0">
+            <input name="payment-method-{ Math.random() }" value="stripe" type="radio" class="custom-control-input" checked={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') }>
+            <label class="custom-control-label pl-2">{ this.t('stripe.method') }</label>
+          </div>
+        </div>
+      </div>
+      <div class="col-4 text-right">
+        <img src="/public/assets/images/vendor/stripe.svg" class="stripe-logo" />
+      </div>
     </div>
-    <img src="/public/assets/images/vendor/cards.svg" class="float-right" />
   </a>
-  <div if={ this.selected && (!Object.keys (opts.val).length || opts.val.type === 'stripe') } class="w-100 px-3">
+  <div if={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') } class="w-100 px-3">
     <div class="row row-eq-height row-cards pt-3 mb-3" if={ ((opts.method.data || {}).cards || []).length }>
       <div class="col-6 col-md-4 pb-3" each={ card, i in ((opts.method.data || {}).cards || []) }>
-        <div class={ 'card card-stripe h-100' : true, 'active' : isCard (card) }>
+        <div class={ 'card card-stripe h-100' : true, 'active' : isCard(card) }>
           <a href="#!" class="card-body" onclick={ onCard }>
             <h2 class="text-right">
-              <fab i="cc-{ card.brand }" />
+              <i class="fab fa-cc-{ card.brand }" />
             </h2>
             <p class="card-text text-center mt-3">
               XXXX XXXX XXXX { card.last4 }
@@ -40,8 +48,8 @@
       <div class="col-7">
         <div class="form-group">
           <label for="cardExpiry">
-            <span class="hidden-md-down">Expiration</span>
-            <span class="hidden-md-up">Exp</span>
+            <span class="d-md-inline d-none">Expiration</span>
+            <span class="d-md-none">Exp</span>
             Date
           </label>
           <div class="row">

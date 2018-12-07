@@ -276,7 +276,7 @@ class StripeController extends PaymentMethodController {
 
     // Load Stripe data for user
     const data = await Data.findOne({
-      'user.id' : order.user ? order.user.get('_id').toString() : null
+      'user.id' : order.get('user.id')
     });
 
     // Add Stripe Payment Method
