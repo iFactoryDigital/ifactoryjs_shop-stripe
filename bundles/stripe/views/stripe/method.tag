@@ -39,7 +39,7 @@
         <input class="form-control" name="number" ref="number" placeholder="Valid Card Number" autocomplete="cc-number" required autofocus onchange={ onChange } />
         <div class="input-group-append">
           <span class="input-group-text">
-            <fa i="credit-card" />
+            <i class="fa fa-credit-card" />
           </span>
         </div>
       </div>

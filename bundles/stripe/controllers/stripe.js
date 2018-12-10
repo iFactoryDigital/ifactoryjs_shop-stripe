@@ -364,7 +364,7 @@ class StripeController extends PaymentMethodController {
             'amount'   : amount,
             'period'   : (line.opts || {}).period,
             'product'  : product.get('_id').toString(),
-            'currency' : payment.get('currency') || 'USD',
+            'currency' : payment.get('currency') || config.get('shop.currency') || 'USD',
             'quantity' : parseInt(line.qty || 1)
           };
         }))).filter((item) => item.type === 'subscription');
