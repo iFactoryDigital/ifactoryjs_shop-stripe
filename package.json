@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/eden-js/shop-stripe#readme",
   "dependencies": {
+    "money-math": "^2.5.1",
     "stripe": "^6.13.0",
     "uuid": "^3.3.2"
   }
