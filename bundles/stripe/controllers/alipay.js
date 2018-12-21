@@ -18,11 +18,10 @@ const Payment = model('payment');
  * @extends PaymentMethodController
  */
 class AlipayController extends PaymentMethodController {
-
   /**
    * Construct Alipay Controller class
    */
-  constructor () {
+  constructor() {
     // Run super
     super();
 
@@ -33,7 +32,7 @@ class AlipayController extends PaymentMethodController {
     this.processAction = this.processAction.bind(this);
 
     // Bind private methods
-    this._pay    = this._pay.bind(this);
+    this._pay = this._pay.bind(this);
     this._method = this._method.bind(this);
   }
 
@@ -47,14 +46,14 @@ class AlipayController extends PaymentMethodController {
    *
    * @return {Promise}
    */
-  async processAction (req, res) {
+  async processAction(req, res) {
     // Set source id
     const sourceID = req.query.source;
 
     // Set payment
     const payment = await Payment.findOne({
       'alipay.id'   : sourceID,
-      'method.type' : 'alipay'
+      'method.type' : 'alipay',
     });
 
     // Check payment
@@ -78,22 +77,22 @@ class AlipayController extends PaymentMethodController {
       try {
         // Create charge
         const charge = await this._stripe.charges.create({
-          'amount'      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? payment.get('amount') : (payment.get('amount') * 100),
-          'currency'    : currency,
-          'source'      : sourceID,
-          'description' : 'Payment ID ' + payment.get('_id').toString()
+          amount      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? payment.get('amount') : (payment.get('amount') * 100),
+          currency,
+          source      : sourceID,
+          description : `Payment ID ${payment.get('_id').toString()}`,
         });
 
         // Set charge
         payment.set('data', {
-          'charge' : charge
+          charge,
         });
         payment.set('complete', true);
       } catch (e) {
         // Set payment error
         payment.set('error', {
-          'id'   : 'alipay',
-          'text' : e.toString()
+          id   : 'alipay',
+          text : e.toString(),
         });
       }
 
@@ -123,15 +122,15 @@ class AlipayController extends PaymentMethodController {
    * @async
    * @private
    */
-  async __method (order, action) {
+  async __method(order, action) {
     // Check super
     if (!await super.__method(order, action)) return;
 
     // Add Alipay Payment Method
     action.data.methods.push({
-      'type'     : 'alipay',
-      'data'     : {},
-      'priority' : 3
+      type     : 'alipay',
+      data     : {},
+      priority : 3,
     });
   }
 
@@ -143,7 +142,7 @@ class AlipayController extends PaymentMethodController {
    * @async
    * @private
    */
-  async _pay (payment) {
+  async _pay(payment) {
     // Check super
     if (!await super._pay(payment) || payment.get('method.type') !== 'alipay') return;
 
@@ -157,44 +156,43 @@ class AlipayController extends PaymentMethodController {
     try {
       // Create source
       const source = await this._stripe.sources.create({
-        'type'     : 'alipay',
-        'amount'   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? payment.get('amount') : (payment.get('amount') * 100),
-        'currency' : currency,
-        'redirect' : {
-          'return_url' : `https://${config.get('domain')}/alipay/process`
-        }
+        type     : 'alipay',
+        amount   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? payment.get('amount') : (payment.get('amount') * 100),
+        currency,
+        redirect : {
+          return_url : `https://${config.get('domain')}/alipay/process`,
+        },
       });
 
       // Check source
       if (source.hasOwnProperty('redirect') && source.redirect.hasOwnProperty('url')) {
         // Update payment
         payment.set('alipay', {
-          'id' : source.id
+          id : source.id,
         });
 
         payment.set('data', {
-          'source' : source
+          source,
         });
 
         payment.set('redirect', source.redirect.url);
       } else {
         // Set payment error
         payment.set('error', {
-          'id'   : 'alipay.nourl',
-          'text' : 'No redirect URI present'
+          id   : 'alipay.nourl',
+          text : 'No redirect URI present',
         });
       }
     } catch (e) {
       // Set payment error
       payment.set('error', {
-        'id'   : 'alipay',
-        'text' : e.toString()
+        id   : 'alipay',
+        text : e.toString(),
       });
     }
 
     payment.set('complete', false);
   }
-
 }
 
 /**
