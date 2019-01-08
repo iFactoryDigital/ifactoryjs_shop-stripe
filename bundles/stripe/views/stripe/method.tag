@@ -29,44 +29,29 @@
         </div>
       </div>
     </div>
-    <div class="form-group">
-      <label for="cardNumber">Card Name</label>
-      <input type="text" ref="name" class="form-control" name="name" placeholder="Name on card" autocomplete="cc-name" required autofocus onchange={ onChange } />
-    </div>
-    <div class="form-group">
-      <label for="cardNumber">Card Number</label>
-      <div class="input-group">
-        <input class="form-control" name="number" ref="number" placeholder="Valid Card Number" autocomplete="cc-number" required autofocus onchange={ onChange } />
+    <validate type="text" name="name" ref="name" required={ true } autocomplete="cc-name" on-change={ onChange } label="Card Name" min-length="5" />
+    <validate type="text" name="number" ref="number" required={ true } autocomplete="cc-number" on-change={ onChange } label="Card Number" min-length="5">
+      <yield to="append">
         <div class="input-group-append">
           <span class="input-group-text">
             <i class="fa fa-credit-card" />
           </span>
         </div>
-      </div>
-    </div>
+      </yield>
+    </validate>
     <div class="row">
       <div class="col-7">
-        <div class="form-group">
-          <label for="cardExpiry">
-            <span class="d-md-inline d-none">Expiration</span>
-            <span class="d-md-none">Exp</span>
-            Date
-          </label>
-          <div class="row">
-            <div class="col-6">
-              <input class="form-control" ref="month" name="expiry[month]" placeholder="MM" autocomplete="cc-exp-month" required onchange={ onChange } />
-            </div>
-            <div class="col-6">
-              <input class="form-control" ref="year" name="expiry[year]" placeholder="YY" autocomplete="cc-exp-year" required onchange={ onChange } />
-            </div>
+        <div class="row">
+          <div class="col-6">
+            <validate type="text" name="month" ref="month" required={ true } autocomplete="cc-exp-month" on-change={ onChange } label="Month" min-length="2" min-length="2" />
+          </div>
+          <div class="col-6">
+            <validate type="text" name="year" ref="year" required={ true } autocomplete="cc-exp-year" on-change={ onChange } label="Year" min-length="2" min-length="2" />
           </div>
         </div>
       </div>
       <div class="col-5">
-        <div class="form-group">
-          <label for="csc">Security Code Code</label>
-          <input id="csc" class="form-control" ref="csc" name="csc" placeholder="CSC" autocomplete="cc-csc" required onchange={ onChange } />
-        </div>
+        <validate type="text" name="csc" ref="csc" required={ true } autocomplete="cc-csc" on-change={ onChange } label="Security Code" min-length="3" min-length="3" />
       </div>
     </div>
     <p class="payment-errors"></p>
@@ -79,7 +64,7 @@
 
   <script>
     // do mixins
-    this.mixin ('i18n');
+    this.mixin('i18n');
 
     // set values
     this.loading  = false;
@@ -92,13 +77,13 @@
      */
     onCard (e) {
       // prevent default
-      e.preventDefault ();
+      e.preventDefault();
 
       // set card
       opts.method.data.card = e.item.card;
 
       // on ready
-      opts.onReady (opts.method);
+      opts.onReady(opts.method);
     }
 
     /**
@@ -109,16 +94,16 @@
     onSelect (e) {
       // check method
       if (!opts.method.data.card) {
-        opts.onReady (null);
+        opts.onReady(null);
       } else {
-        opts.onReady (opts.method);
+        opts.onReady(opts.method);
       }
 
       // select
       this.selected = true;
 
       // update view
-      this.update ();
+      this.update();
     }
 
     /**
@@ -128,12 +113,12 @@
      */
     onChange (e) {
       // return false on details
-      if (['csc', 'name', 'number', 'year', 'month'].find ((test) => !jQuery (this.refs[test]).val ().length)) {
-        return console.log ('here');
+      if (['csc', 'name', 'number', 'year', 'month'].find((test) => !(this.refs[test].value || '').length)) {
+        return console.log('here');
       }
 
       // get name and address
-      let save = jQuery (this.refs.save).is (':checked');
+      let save = jQuery(this.refs.save).is(':checked');
       let card = {
         'csc'  : this.refs.csc.value,
         'name' : this.refs.name.value,
@@ -151,7 +136,7 @@
       opts.method.data = { save, card };
 
       // on ready
-      opts.onReady (opts.method);
+      opts.onReady(opts.method);
     }
 
     /**
