@@ -1,5 +1,6 @@
 {
   "stripe" : {
+    "title"  : "Stripe",
     "method" : "Checkout with Credit Card",
     "create" : "Add Card",
 
