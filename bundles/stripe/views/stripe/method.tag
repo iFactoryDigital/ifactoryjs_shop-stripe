@@ -3,9 +3,9 @@
     <div class="row">
       <div class="col-8 d-flex align-items-center">
         <div class="w-100">
-          <div class="custom-control custom-radio p-0">
+          <div class="custom-control custom-radio">
             <input name="payment-method-{ Math.random() }" value="stripe" type="radio" class="custom-control-input" checked={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') }>
-            <label class="custom-control-label pl-2">{ this.t('stripe.method') }</label>
+            <label class="custom-control-label">{ this.t('stripe.method') }</label>
           </div>
         </div>
       </div>
