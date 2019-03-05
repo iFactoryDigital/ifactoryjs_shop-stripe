@@ -1,7 +1,7 @@
 {
   "name": "@edenjs/shop-stripe",
   "description": "",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "dependencies": {
     "money-math": "^2.5.1",
     "stripe": "^6.13.0",
