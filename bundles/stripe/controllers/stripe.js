@@ -340,7 +340,7 @@ class StripeController extends PaymentMethodController {
           const price = await ProductHelper.price(product, line.opts || {});
 
           // return value
-          const amount = parseFloat(price.amount) * parseInt(line.qty || 1);
+          const amount = parseFloat(price.amount) * parseInt(line.qty || 1, 10);
 
           // hook
           await this.eden.hook('line.price', {
@@ -356,15 +356,15 @@ class StripeController extends PaymentMethodController {
 
           // return object
           return {
+            amount,
             sku      : product.get('sku') + (Object.values(line.opts || {})).join('_'),
             name     : product.get('title.en-us'),
             type     : product.get('type'),
             price    : money.floatToAmount(parseFloat(price.amount)),
-            amount,
             period   : (line.opts || {}).period,
             product  : product.get('_id').toString(),
             currency : payment.get('currency') || config.get('shop.currency') || 'USD',
-            quantity : parseInt(line.qty || 1),
+            quantity : parseInt(line.qty || 1, 10),
           };
         }))).filter(item => item.type === 'subscription');
 
@@ -408,7 +408,7 @@ class StripeController extends PaymentMethodController {
 
           // create plan
           const plan = await this._stripe.plans.create({
-            amount   : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? parseInt(item.price) : parseInt(parseFloat(item.price) * 100),
+            amount   : zeroDecimal.includes(currency.toUpperCase()) ? parseInt(item.price, 10) : parseInt(parseFloat(item.price) * 100, 10),
             product  : {
               name : `Subscription #${subscription.get('_id').toString()}`,
             },
