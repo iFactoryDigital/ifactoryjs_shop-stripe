@@ -14,8 +14,7 @@ const Data    = model('stripe');
 const Product = model('product');
 
 // require helpers
-const orderHelper   = helper('order');
-const productHelper = helper('product');
+const orderHelper = helper('order');
 
 /**
  * Create Stripe Controller class
