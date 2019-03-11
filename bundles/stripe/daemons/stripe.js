@@ -33,6 +33,24 @@ class StripeDaemon extends Daemon {
       // save subscription
       await subscription.save();
     });
+
+    // update agreement
+    this.eden.endpoint('subscription.stripe.update', async (subscription) => {
+      // cancel subscription
+      const agreement = await this._stripe.subscriptions.retrieve(subscription.get('charge.id'));
+
+      // check active
+      if (agreement.status !== 'active' || agreement.cancel_at_period_end) {
+        // set cancel
+        subscription.set('cancel', agreement);
+
+        // set state
+        subscription.set('state', 'cancelled');
+
+        // save subscription
+        await subscription.save();
+      }
+    });
   }
 }
 
