@@ -14,7 +14,8 @@ const Data    = model('stripe');
 const Product = model('product');
 
 // require helpers
-const ProductHelper = helper('product');
+const orderHelper   = helper('order');
+const productHelper = helper('product');
 
 /**
  * Create Stripe Controller class
@@ -318,6 +319,9 @@ class StripeController extends PaymentMethodController {
     const order         = await invoice.get('order');
     const subscriptions = await order.get('subscriptions');
 
+    // get lines
+    const lines = await orderHelper.lines(order);
+
     // Get currency
     const currency = payment.get('currency').toLowerCase() || 'usd';
 
@@ -332,35 +336,17 @@ class StripeController extends PaymentMethodController {
       // get subscriptions
       if (subscriptions && subscriptions.length) {
         // let items
-        const subscriptionItems = (await Promise.all(invoice.get('lines').map(async (line) => {
+        const subscriptionItems = (await Promise.all(lines.map(async (line) => {
           // get product
           const product = await Product.findById(line.product);
 
-          // get price
-          const price = await ProductHelper.price(product, line.opts || {});
-
-          // return value
-          const amount = parseFloat(price.amount) * parseInt(line.qty || 1, 10);
-
-          // hook
-          await this.eden.hook('line.price', {
-            qty  : line.qty,
-            user : await order.get('user'),
-            opts : line.opts,
-
-            order,
-            price,
-            amount,
-            product,
-          });
-
           // return object
           return {
-            amount,
-            sku      : product.get('sku') + (Object.values(line.opts || {})).join('_'),
-            name     : product.get('title.en-us'),
+            sku      : line.sku,
+            name     : line.title,
             type     : product.get('type'),
-            price    : money.floatToAmount(parseFloat(price.amount)),
+            price    : money.floatToAmount(parseFloat(line.price)),
+            amount   : money.floatToAmount(parseFloat(line.amount)),
             period   : (line.opts || {}).period,
             product  : product.get('_id').toString(),
             currency : payment.get('currency') || config.get('shop.currency') || 'USD',
@@ -452,8 +438,8 @@ class StripeController extends PaymentMethodController {
 
       // create data
       const data = {
-        amount      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
         currency,
+        amount      : zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100),
         description : `Payment ID ${payment.get('_id').toString()}`,
       };
 
