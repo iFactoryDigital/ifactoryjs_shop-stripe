@@ -6,6 +6,7 @@
 
     "order" : {
       "paid"     : "Paid with Credit Card",
+      "failed"   : "Credit Card payment failed",
       "pending"  : "Credit Card payment pending"
     }
   },
