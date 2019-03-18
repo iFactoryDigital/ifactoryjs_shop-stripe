@@ -387,20 +387,10 @@ class StripeController extends PaymentMethodController {
           // find item
           const item = subscriptionItems.find(i => i.product = subscription.get('product.id') && i.period === subscription.get('period'));
 
-          console.log({
-            amount   : (zeroDecimal.includes(currency.toUpperCase()) ? parseInt(item.price, 10) : parseInt(parseFloat(item.price) * 100, 10)).toFixed(0),
-            product  : {
-              name : `Subscription #${subscription.get('_id').toString()}`,
-            },
-            interval       : periods[item.period].interval,
-            currency       : item.currency,
-            interval_count : periods[item.period].interval_count,
-          });
-
           // create plan
           const plan = await this._stripe.plans.create({
-            amount   : (zeroDecimal.includes(currency.toUpperCase()) ? parseInt(item.price, 10) : parseInt(parseFloat(item.price) * 100, 10)).toFixed(0),
-            product  : {
+            amount  : (zeroDecimal.includes(currency.toUpperCase()) ? parseInt(item.price, 10) : parseInt(parseFloat(item.price) * 100, 10)).toFixed(0),
+            product : {
               name : `Subscription #${subscription.get('_id').toString()}`,
             },
             interval       : periods[item.period].interval,
@@ -431,8 +421,6 @@ class StripeController extends PaymentMethodController {
           await subscription.save();
         }));
       }
-
-      console.log(realTotal);
 
       // check amount
       if (!realTotal || realTotal < 0) {
