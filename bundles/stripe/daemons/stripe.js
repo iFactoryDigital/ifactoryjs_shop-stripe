@@ -29,6 +29,7 @@ class StripeDaemon extends Daemon {
 
       // set state
       subscription.set('state', 'cancelled');
+      subscription.set('cancel_at', new Date());
 
       // save subscription
       await subscription.save();
@@ -46,6 +47,7 @@ class StripeDaemon extends Daemon {
 
         // set state
         subscription.set('state', 'cancelled');
+        subscription.set('cancel_at', new Date());
 
         // save subscription
         await subscription.save();
