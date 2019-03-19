@@ -312,7 +312,7 @@ class StripeController extends PaymentMethodController {
     // get invoice details
     const invoice       = await payment.get('invoice');
     const orders        = await invoice.get('orders');
-    const subscriptions = [].concat(...(await Promise.all(orders.map(order => order.get('subscriptions')))));
+    const subscriptions = [].concat(...(await Promise.all(orders.map(order => order.get('subscriptions'))))).filter(s => s);
 
     // get lines
     const lines = invoice.get('lines');
