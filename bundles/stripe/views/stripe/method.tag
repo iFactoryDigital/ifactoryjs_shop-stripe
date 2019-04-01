@@ -14,7 +14,7 @@
       </div>
     </div>
   </a>
-  <div if={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') } class="w-100 py-3">
+  <div if={ this.selected && (!Object.keys(opts.val).length || opts.val.type === 'stripe') } class="w-100 p-3">
     <div class="row row-eq-height row-cards pt-3 mb-3" if={ ((opts.method.data || {}).cards || []).length && !opts.action.manual }>
       <div class="col-6 col-md-4 pb-3" each={ card, i in ((opts.method.data || {}).cards || []) }>
         <div class={ 'card card-stripe h-100' : true, 'active' : isCard(card) }>

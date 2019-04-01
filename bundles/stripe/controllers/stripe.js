@@ -425,7 +425,7 @@ class StripeController extends PaymentMethodController {
           // create coupon
           await this._stripe.coupons.create({
             currency,
-            id         : invoice.get('_id').toString(),
+            id         : uuid(),
             duration   : 'once',
             amount_off : ((subscriptionTotal - initialTotal) * 100).toFixed(0),
           });
