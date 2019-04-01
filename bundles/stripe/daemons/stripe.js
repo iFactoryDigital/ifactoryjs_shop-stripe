@@ -22,6 +22,9 @@ class StripeDaemon extends Daemon {
 
     // add endpoint
     this.eden.endpoint('subscription.stripe.cancel', async (subscription) => {
+      // check charge
+      if (!subscription.get('charge.id')) return;
+
       // cancel subscription
       subscription.set('cancel', await this._stripe.subscriptions.update(subscription.get('charge.id'), {
         cancel_at_period_end : true,
@@ -37,6 +40,9 @@ class StripeDaemon extends Daemon {
 
     // update agreement
     this.eden.endpoint('subscription.stripe.update', async (subscription) => {
+      // check charge
+      if (!subscription.get('charge.id')) return;
+
       // cancel subscription
       const agreement = await this._stripe.subscriptions.retrieve(subscription.get('charge.id'));
 
