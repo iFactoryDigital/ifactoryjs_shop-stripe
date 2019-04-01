@@ -344,6 +344,7 @@ class StripeController extends PaymentMethodController {
             amount   : money.floatToAmount(parseFloat(line.total)),
             period   : (line.opts || {}).period,
             product  : product.get('_id').toString(),
+            discount : line.discount || 0,
             currency : payment.get('currency') || config.get('shop.currency') || 'USD',
             quantity : parseInt(line.qty || 1, 10),
           };
@@ -354,9 +355,16 @@ class StripeController extends PaymentMethodController {
           // add amount
           return money.add(accum, money.floatToAmount(parseFloat(item.price) * item.quantity));
         }, '0.00'));
+        const initialTotal = parseFloat(subscriptionItems.reduce((accum, line) => {
+          // return accum
+          accum = money.add(accum, money.floatToAmount(parseFloat(line.price) * (line.quantity || 1)));
+
+          // return value
+          return money.subtract(accum, money.floatToAmount(line.discount));
+        }, '0.00'));
 
         // remove amount
-        realTotal -= subscriptionTotal;
+        realTotal -= initialTotal;
 
         // set periods
         const periods = {
@@ -402,15 +410,32 @@ class StripeController extends PaymentMethodController {
           subscription.set('plan', plan);
         }));
 
-        // create actual subscription
-        const charge = await this._stripe.subscriptions.create({
+        // check data
+        const subData = {
           items : subscriptions.map((subscription) => {
             return {
               plan : subscription.get('plan.id'),
             };
           }),
           customer : source.customer,
-        });
+        };
+
+        // check total
+        if (initialTotal < subscriptionTotal) {
+          // create coupon
+          await this._stripe.coupons.create({
+            currency,
+            id         : invoice.get('_id').toString(),
+            duration   : 'once',
+            amount_off : ((subscriptionTotal - initialTotal) * 100).toFixed(0),
+          });
+
+          // discounted
+          subData.coupon = invoice.get('_id').toString();
+        }
+
+        // create actual subscription
+        const charge = await this._stripe.subscriptions.create(subData);
 
         // loop subscriptions
         await Promise.all(subscriptions.map(async (subscription) => {
