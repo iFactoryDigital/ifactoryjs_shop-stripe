@@ -420,6 +420,12 @@ class StripeController extends PaymentMethodController {
           customer : source.customer,
         };
 
+        // set trial
+        if (invoice.get('trial')) {
+          // set trial end
+          subData.trial_end = parseInt((new Date(invoice.get('trial'))).getTime() / 1000, 10);
+        }
+
         // check total
         if (initialTotal < subscriptionTotal) {
           // create coupon
