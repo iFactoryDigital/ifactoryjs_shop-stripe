@@ -429,7 +429,7 @@ class StripeController extends PaymentMethodController {
         // check total
         if (initialTotal < subscriptionTotal) {
           // create coupon
-          await this._stripe.coupons.create({
+          const coupon = await this._stripe.coupons.create({
             currency,
             id         : uuid(),
             duration   : 'once',
@@ -437,7 +437,7 @@ class StripeController extends PaymentMethodController {
           });
 
           // discounted
-          subData.coupon = invoice.get('_id').toString();
+          subData.coupon = coupon.id;
         }
 
         // create actual subscription
