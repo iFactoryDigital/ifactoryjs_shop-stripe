@@ -1,11 +1,13 @@
 <stripe-checkout>
-  <div class="pay-now" ref="button">
-
-  </div>
-  <div if={ this.can } class="mb-4 mt-4 text-center">
-    <h3 class="text-muted m-0">
-      - OR -
-    </h3>
+  <div if={ this.can }>
+    <button class="btn btn-block btn-lg btn-primary" onclick={ onClick }>
+      Buy Now
+    </button>
+    <div class="mb-4 mt-4 text-center">
+      <h3 class="text-muted m-0">
+        - OR -
+      </h3>
+    </div>
   </div>
 
   <script>
@@ -16,6 +18,20 @@
 
     // set variables
     this.loading = false;
+    
+    /**
+     * on click
+     *
+     * @param {Event} e
+     */
+    onClick(e) {
+      // prevent default
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // show payment request
+      this.request.show();
+    }
 
     /**
      * on remove removes code
@@ -26,6 +42,8 @@
 
       // check frontend
       if (!this.eden.frontend) return;
+      
+      window.checkout = opts.checkout;
 
       // build stripe
       this.stripe  = Stripe(this.config.stripe);
@@ -40,12 +58,6 @@
         'requestPayerEmail' : true,
       });
 
-      // create elements
-      const elements = this.stripe.elements();
-      const prButton = elements.create('paymentRequestButton', {
-        'paymentRequest' : this.request
-      });
-
       // await can make payment
       const result = await this.request.canMakePayment();
 
@@ -57,9 +69,6 @@
 
       // update view
       this.update();
-
-      // mount stripe button
-      prButton.mount(this.refs.button);
 
       // on token
       const ev = await new Promise((resolve) => this.request.on('token', resolve));
