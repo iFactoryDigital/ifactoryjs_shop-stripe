@@ -1,13 +1,9 @@
 // Require dependencies
-const uuid   = require('uuid');
-const money  = require('money-math');
-const stripe = require('stripe');
-
-// Require local dependencies
-const config = require('config');
-
-// Require local class dependencies
-const PaymentMethodController = require('payment/controllers/method');
+const uuid       = require('uuid');
+const money      = require('money-math');
+const config     = require('config');
+const stripe     = require('stripe');
+const Controller = require('controller');
 
 // Require models
 const Data    = model('stripe');
@@ -16,9 +12,9 @@ const Product = model('product');
 /**
  * Create Stripe Controller class
  *
- * @extends PaymentMethodController
+ * @extends Controller
  */
-class StripeController extends PaymentMethodController {
+class StripeController extends Controller {
   /**
    * Construct Stripe Controller class
    */
@@ -29,33 +25,48 @@ class StripeController extends PaymentMethodController {
     // Set private variables
     this._stripe = stripe(config.get('stripe.secret'));
 
+    // bind methods
+    this.payHook = this.payHook.bind(this);
+    this.viewHook = this.viewHook.bind(this);
+    this.methodHook = this.methodHook.bind(this);
+    this.orderHook = this.orderHook.bind(this);
+    this.checkoutHook = this.checkoutHook.bind(this);
+
     // Bind private methods
+    this._middleware = this._middleware.bind(this);
     this._createSource = this._createSource.bind(this);
-
-    // Bind super private methods
-    this._pay = this._pay.bind(this);
-    this._method = this._method.bind(this);
-
-    // On checkout init
-    this.eden.pre('order.stripe', this._paymentRequest);
-    this.eden.pre('checkout.init', this._checkout);
 
     // Use middleware
     this.eden.router.use(this._middleware);
+  }
 
-    // Hook view state
-    this.eden.pre('view.compile', (render) => {
-      // Set config
-      render.config.stripe = config.get('stripe.client');
-    });
+
+  // ////////////////////////////////////////////////////////////////////////////
+  //
+  // HOOK METHODS
+  //
+  // ////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Checkout order
+   *
+   * @param {Object} order
+   *
+   * @pre view.compile
+   */
+  viewHook(render) {
+    // Set config
+    render.config.stripe = config.get('stripe.client');
   }
 
   /**
    * Checkout order
    *
-   * @param  {Object} order
+   * @param {Object} order
+   *
+   * @pre checkout.init
    */
-  _checkout(order) {
+  checkoutHook(order) {
     // Add action
     order.set('actions.stripe', {
       type     : 'stripe',
@@ -65,14 +76,41 @@ class StripeController extends PaymentMethodController {
   }
 
   /**
+   * Add Payment Method to list
+   *
+   * @param {Object} order
+   * @param {Object} action
+   *
+   * @pre    payment.init
+   * @return {Promise}
+   */
+  async methodHook(order, action) {
+    // Return action check
+    if (action.type !== 'payment') return;
+
+    // Load Stripe data for user
+    const data = await Data.findOne({
+      'user.id' : order.get('user.id'),
+    });
+
+    // Add Stripe Payment Method
+    action.data.methods.push({
+      type     : 'stripe',
+      data     : data ? await data.sanitise() : {},
+      priority : 0,
+    });
+  }
+
+  /**
    * on shipping
    *
    * @param  {order}   Order
    * @param  {Object}  action
    *
+   * @pre    order.stripe
    * @return {Promise}
    */
-  async _paymentRequest(order, action, actions) {
+  async orderHook(order, action, actions) {
     // set shipping
     const user = await order.get('user');
 
@@ -110,189 +148,16 @@ class StripeController extends PaymentMethodController {
   }
 
   /**
-   * stripe middleware
-   *
-   * @param {req} req
-   * @param {res} res
-   * @param {Function} next
-   */
-  _middleware(req, res, next) {
-    // set footer
-    const ft = '<script src="//js.stripe.com/v3/"></script>';
-
-    // set head
-    res.locals.page.script = (res.locals.page.script || '') + ft;
-
-    // run next
-    next();
-  }
-
-  /**
-   * Create source based on a given payment
-   *
-   * @param  {Payment} payment
-   *
-   * @return {Promise<Data|boolean>}
-   *
-   * @private
-   */
-  async _createSource(payment) {
-    // Set method
-    const method = payment.get('method.data');
-
-    // Set user
-    const user = await payment.get('user');
-
-    // Set data
-    let data = user && await Data.findOne({
-      'user.id' : user.get('_id').toString(),
-    });
-
-    // Check card id
-    if (method.card.id) {
-      // Check user
-      if (!user) {
-        // Set error
-        payment.set('error', {
-          id   : 'stipe.nouser',
-          text : 'Invalid user',
-        });
-
-        // Return false
-        return false;
-      }
-
-      const card = data && (data.get('cards') || []).find((card) => {
-        // Return card id check
-        return card.id = method.card.id;
-      });
-
-      // Check data
-      if (!card) {
-        // Set error
-        payment.set('error', {
-          id   : 'stipe.notfound',
-          text : 'Credit card not found',
-        });
-
-        // Return false
-        return false;
-      }
-
-      // Return source
-      return {
-        source   : card.source,
-        customer : data.get('customer'),
-      };
-    }
-
-    // Try/catch
-    try {
-      // Set customer
-      const customer = data ? data.get('customer') : (await this._stripe.customers.create({
-        email : user ? user.get('email') : 'anonymous',
-      })).id;
-
-      // Check data and save
-      if (user && !data && method.save) {
-        // Create new data
-        data = new Data({
-          user,
-          customer,
-        });
-      }
-
-      // Set req
-      const req = method.card;
-
-      // Create card
-      const card = await this._stripe.customers.createSource(customer, {
-        source : {
-          cvc       : req.cvc,
-          name      : req.name,
-          number    : req.number,
-          object    : 'card',
-          exp_year  : req.expiry.year,
-          exp_month : req.expiry.month,
-        },
-      });
-
-      // Check save
-      if (method.save && data) {
-        // Set cards
-        const cards = data.get('cards') || [];
-
-        // Push new card to cards
-        cards.push({
-          id      : uuid(),
-          brand   : card.brand.toLowerCase(),
-          last4   : card.last4,
-          source  : card.id,
-          funding : card.funding,
-          country : card.country,
-        });
-
-        // Update data
-        data.set('cards', cards);
-
-        // Save data
-        await data.save();
-      }
-
-      // Return source
-      return {
-        source   : card.id,
-        customer,
-      };
-    } catch (e) {
-      // Set error
-      payment.set('error', {
-        id   : 'stipe.error',
-        text : e.toString(),
-      });
-
-      // Return false
-      return false;
-    }
-  }
-
-  /**
-   * Add Payment Method to list
-   *
-   * @param {Object} order
-   * @param {Object} action
-   *
-   * @async
-   * @private
-   */
-  async _method(order, action) {
-    // Check super
-    if (!await super._method(order, action)) return;
-
-    // Load Stripe data for user
-    const data = await Data.findOne({
-      'user.id' : order.get('user.id'),
-    });
-
-    // Add Stripe Payment Method
-    action.data.methods.push({
-      type     : 'stripe',
-      data     : data ? await data.sanitise() : {},
-      priority : 0,
-    });
-  }
-
-  /**
    * Pay using Payment Method
    *
    * @param {Payment} payment
    *
-   * @async
-   * @private
+   * @pre    payment.pay
+   * @return {Promise}
    */
-  async _pay(payment) {
+  async payHook(payment) {
     // Check super
-    if (!await super._pay(payment) || payment.get('method.type') !== 'stripe') return;
+    if (payment.get('method.type') !== 'stripe') return;
 
     // set source
     let source = null;
@@ -498,6 +363,160 @@ class StripeController extends PaymentMethodController {
 
       // Set not complete
       payment.set('complete', false);
+    }
+  }
+
+
+  // ////////////////////////////////////////////////////////////////////////////
+  //
+  // PRIVATE METHODS
+  //
+  // ////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * stripe middleware
+   *
+   * @param {req} req
+   * @param {res} res
+   * @param {Function} next
+   */
+  _middleware(req, res, next) {
+    // set footer
+    const ft = '<script src="//js.stripe.com/v3/"></script>';
+
+    // set head
+    res.locals.page.script = (res.locals.page.script || '') + ft;
+
+    // run next
+    next();
+  }
+
+  /**
+   * Create source based on a given payment
+   *
+   * @param  {Payment} payment
+   *
+   * @return {Promise<Data|boolean>}
+   *
+   * @private
+   */
+  async _createSource(payment) {
+    // Set method
+    const method = payment.get('method.data');
+
+    // Set user
+    const user = await payment.get('user');
+
+    // Set data
+    let data = user && await Data.findOne({
+      'user.id' : user.get('_id').toString(),
+    });
+
+    // Check card id
+    if (method.card.id) {
+      // Check user
+      if (!user) {
+        // Set error
+        payment.set('error', {
+          id   : 'stipe.nouser',
+          text : 'Invalid user',
+        });
+
+        // Return false
+        return false;
+      }
+
+      const card = data && (data.get('cards') || []).find((card) => {
+        // Return card id check
+        return card.id = method.card.id;
+      });
+
+      // Check data
+      if (!card) {
+        // Set error
+        payment.set('error', {
+          id   : 'stipe.notfound',
+          text : 'Credit card not found',
+        });
+
+        // Return false
+        return false;
+      }
+
+      // Return source
+      return {
+        source   : card.source,
+        customer : data.get('customer'),
+      };
+    }
+
+    // Try/catch
+    try {
+      // Set customer
+      const customer = data ? data.get('customer') : (await this._stripe.customers.create({
+        email : user ? user.get('email') : 'anonymous',
+      })).id;
+
+      // Check data and save
+      if (user && !data && method.save) {
+        // Create new data
+        data = new Data({
+          user,
+          customer,
+        });
+      }
+
+      // Set req
+      const req = method.card;
+
+      // Create card
+      const card = await this._stripe.customers.createSource(customer, {
+        source : {
+          cvc       : req.cvc,
+          name      : req.name,
+          number    : req.number,
+          object    : 'card',
+          exp_year  : req.expiry.year,
+          exp_month : req.expiry.month,
+        },
+      });
+
+      // Check save
+      if (method.save && data) {
+        // Set cards
+        const cards = data.get('cards') || [];
+
+        // Push new card to cards
+        cards.push({
+          id      : uuid(),
+          brand   : card.brand.toLowerCase(),
+          last4   : card.last4,
+          source  : card.id,
+          funding : card.funding,
+          country : card.country,
+        });
+
+        // Update data
+        data.set('cards', cards);
+
+        // Save data
+        await data.save();
+      }
+
+      // Return source
+      return {
+        source   : card.id,
+        customer,
+      };
+    } catch (e) {
+      // Set error
+      payment.set('error', {
+        id   : 'stipe.error',
+        text : e.toString(),
+      });
+
+      // Return false
+      return false;
     }
   }
 }
