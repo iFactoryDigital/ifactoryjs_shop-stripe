@@ -20,7 +20,7 @@
     /**
      * on remove removes code
      */
-    this.on ('mount', async () => {
+    this.on('mount', async () => {
       // set validate to value
       if (!opts.action.value) opts.action.value = {};
 
@@ -31,7 +31,7 @@
       this.stripe  = Stripe(this.config.stripe);
       this.request = this.stripe.paymentRequest({
         'country'  : 'US',
-        'currency' : 'usd',
+        'currency' : (this.eden.get('shop.currency') || 'USD').toLowerCase(),
         'total' : {
           'label'  : 'GM8 order',
           'amount' : (await opts.checkout.total() * 100),
@@ -50,35 +50,35 @@
       const result = await this.request.canMakePayment();
 
       // check result
-      if (result) {
-        // set can
-        this.can = true;
+      if (!result) return;
+    
+      // set can
+      this.can = true;
 
-        // update view
-        this.update();
+      // update view
+      this.update();
 
-        // mount stripe button
-        prButton.mount(this.refs.button);
+      // mount stripe button
+      prButton.mount(this.refs.button);
 
-        // on token
-        this.request.on('token', (ev) => {
-          // submit checkout
-          opts.action.value = Object.assign({}, ev);
+      // on token
+      const ev = await new Promise((resolve) => this.request.on('token', resolve));
+      
+      // submit checkout
+      opts.action.value = Object.assign({}, ev);
 
-          // remove complete
-          delete opts.action.value.complete;
+      // remove complete
+      delete opts.action.value.complete;
 
-          // submit
-          let order = opts.checkout.submit();
+      // submit
+      const order = opts.checkout.submit();
 
-          // check paid
-          if ((order.invoice || {}).paid) {
-            // complete success
-            ev.complete('success');
-          } else {
-            ev.complete('fail');
-          }
-        });
+      // check paid
+      if ((order.invoice || {}).paid) {
+        // complete success
+        ev.complete('success');
+      } else {
+        ev.complete('fail');
       }
     });
 

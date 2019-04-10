@@ -20,15 +20,61 @@ class StripeDaemon extends Daemon {
     // Set private variables
     this._stripe = stripe(config.get('stripe.secret'));
 
-    // add endpoint
-    this.eden.endpoint('subscription.stripe.cancel', async (subscription) => {
-      // check charge
-      if (!subscription.get('charge.id')) return;
+    // bind methods
+    this.cancelEndpoint = this.cancelEndpoint.bind(this);
+    this.updateEndpoint = this.updateEndpoint.bind(this);
+  }
 
-      // cancel subscription
-      subscription.set('cancel', await this._stripe.subscriptions.update(subscription.get('charge.id'), {
-        cancel_at_period_end : true,
-      }));
+  // ////////////////////////////////////////////////////////////////////////////
+  //
+  // ENDPOINTS
+  //
+  // ////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * cancel endpoint
+   *
+   * @param  {Subscription} subscription
+   *
+   * @return   {Promise}
+   * @endpoint subscription.stripe.cancel
+   */
+  async cancelEndpoint(subscription) {
+    // check charge
+    if (!subscription.get('charge.id')) return;
+
+    // cancel subscription
+    subscription.set('cancel', await this._stripe.subscriptions.update(subscription.get('charge.id'), {
+      cancel_at_period_end : true,
+    }));
+
+    // set state
+    subscription.set('state', 'cancelled');
+    subscription.set('cancel_at', new Date());
+
+    // save subscription
+    await subscription.save();
+  }
+
+  /**
+   * update endpoint
+   *
+   * @param  {Subscription} subscription
+   *
+   * @return   {Promise}
+   * @endpoint subscription.stripe.update
+   */
+  async updateEndpoint(subscription) {
+    // check charge
+    if (!subscription.get('charge.id')) return;
+
+    // cancel subscription
+    const agreement = await this._stripe.subscriptions.retrieve(subscription.get('charge.id'));
+
+    // check active
+    if (agreement.status !== 'active' || agreement.cancel_at_period_end) {
+      // set cancel
+      subscription.set('cancel', agreement);
 
       // set state
       subscription.set('state', 'cancelled');
@@ -36,29 +82,7 @@ class StripeDaemon extends Daemon {
 
       // save subscription
       await subscription.save();
-    });
-
-    // update agreement
-    this.eden.endpoint('subscription.stripe.update', async (subscription) => {
-      // check charge
-      if (!subscription.get('charge.id')) return;
-
-      // cancel subscription
-      const agreement = await this._stripe.subscriptions.retrieve(subscription.get('charge.id'));
-
-      // check active
-      if (agreement.status !== 'active' || agreement.cancel_at_period_end) {
-        // set cancel
-        subscription.set('cancel', agreement);
-
-        // set state
-        subscription.set('state', 'cancelled');
-        subscription.set('cancel_at', new Date());
-
-        // save subscription
-        await subscription.save();
-      }
-    });
+    }
   }
 }
 
