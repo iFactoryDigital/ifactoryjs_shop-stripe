@@ -1,13 +1,8 @@
 <stripe-checkout>
-  <div if={ this.can }>
+  <div if={ this.can } class="mb-4">
     <button class="btn btn-block btn-lg btn-primary" onclick={ onClick }>
-      Buy Now
+      Pay Now
     </button>
-    <div class="mb-4 mt-4 text-center">
-      <h3 class="text-muted m-0">
-        - OR -
-      </h3>
-    </div>
   </div>
 
   <script>
@@ -42,8 +37,6 @@
 
       // check frontend
       if (!this.eden.frontend) return;
-      
-      window.checkout = opts.checkout;
 
       // build stripe
       this.stripe  = Stripe(this.config.stripe);
