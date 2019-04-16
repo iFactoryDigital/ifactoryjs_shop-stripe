@@ -152,7 +152,7 @@ class StripeController extends Controller {
    *
    * @param {Payment} payment
    *
-   * @pre    payment.pay
+   * @post   payment.pay
    * @return {Promise}
    */
   async payHook(payment) {
