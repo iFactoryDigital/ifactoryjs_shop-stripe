@@ -8,6 +8,7 @@ const Controller = require('controller');
 // Require models
 const Data    = model('stripe');
 const Product = model('product');
+const Invoice = model('invoice');
 
 /**
  * Create Stripe Controller class
@@ -175,8 +176,8 @@ class StripeController extends Controller {
     if (!source) return;
 
     // get invoice details
-    const invoice       = await payment.get('invoice');
-    const orders        = await invoice.get('orders');
+    const invoice       = await payment.get('invoice') || new Invoice();
+    const orders        = await invoice.get('orders') || [];
     const subscriptions = [].concat(...(await Promise.all(orders.map(order => order.get('subscriptions'))))).filter(s => s);
 
     // get lines
