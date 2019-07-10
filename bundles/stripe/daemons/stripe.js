@@ -13,9 +13,9 @@ class StripeDaemon extends Daemon {
   /**
    * construct stripe daemon
    */
-  constructor() {
+  constructor(...args) {
     // run super
-    super(...arguments);
+    super(...args);
 
     // Set private variables
     this._stripe = stripe(config.get('stripe.secret'));
@@ -91,4 +91,4 @@ class StripeDaemon extends Daemon {
  *
  * @type {*}
  */
-exports = module.exports = StripeDaemon;
+module.exports = StripeDaemon;

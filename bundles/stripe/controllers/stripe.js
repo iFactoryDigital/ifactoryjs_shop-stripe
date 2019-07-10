@@ -223,6 +223,7 @@ class StripeController extends Controller {
         }, '0.00'));
         const initialTotal = parseFloat(subscriptionItems.reduce((accum, line) => {
           // return accum
+          // eslint-disable-next-line max-len
           accum = money.add(accum, money.floatToAmount(parseFloat(line.price) * (line.quantity || 1)));
 
           // return value
@@ -259,10 +260,14 @@ class StripeController extends Controller {
         // loop subscriptions
         await Promise.all(subscriptions.map(async (subscription) => {
           // find item
-          const item = subscriptionItems.find(i => i.product = subscription.get('product.id') && i.period === subscription.get('period'));
+          const item = subscriptionItems.find((i) => {
+            // return found item
+            return i.product === subscription.get('product.id') && i.period === subscription.get('period');
+          });
 
           // create plan
           const plan = await this._stripe.plans.create({
+            // eslint-disable-next-line max-len
             amount  : (zeroDecimal.includes(currency.toUpperCase()) ? parseInt(item.price, 10) : parseInt(parseFloat(item.price) * 100, 10)).toFixed(0),
             product : {
               name : `Subscription #${subscription.get('_id').toString()}`,
@@ -331,6 +336,7 @@ class StripeController extends Controller {
       // create data
       const data = {
         currency,
+        // eslint-disable-next-line max-len
         amount      : (zeroDecimal.indexOf(currency.toUpperCase()) > -1 ? realTotal : (realTotal * 100)).toFixed(0),
         description : `Payment ID ${payment.get('_id').toString()}`,
       };
@@ -427,9 +433,9 @@ class StripeController extends Controller {
         return false;
       }
 
-      const card = data && (data.get('cards') || []).find((card) => {
+      const card = data && (data.get('cards') || []).find((c) => {
         // Return card id check
-        return card.id = method.card.id;
+        return c.id === method.card.id;
       });
 
       // Check data
@@ -527,4 +533,4 @@ class StripeController extends Controller {
  *
  * @type {StripeController}
  */
-exports = module.exports = StripeController;
+module.exports = StripeController;

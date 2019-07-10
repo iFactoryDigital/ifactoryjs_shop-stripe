@@ -12,9 +12,9 @@ class Stripe extends Model {
    * @param attrs
    * @param options
    */
-  constructor() {
+  constructor(...args) {
     // run super
-    super(...arguments);
+    super(...args);
 
     // bind methods
     this.sanitise = this.sanitise.bind(this);
@@ -45,4 +45,4 @@ class Stripe extends Model {
  *
  * @type {stripe}
  */
-exports = module.exports = Stripe;
+module.exports = Stripe;
