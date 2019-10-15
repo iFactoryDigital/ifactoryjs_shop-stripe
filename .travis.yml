@@ -18,4 +18,4 @@ deploy:
     secure: DDYlQNL2EH5X5t9bNgOdD6WGuUhVmiWm/bZI9YWgHyFKVd1+CbnPE1vzVWWiDStMaICh6UPvg9OKwF9FYnbtkjBcAMLqgAyyIQKXnCZr20mEJocWtXN6mX4vrD0HiHyB+dmbdHIgpDtqJlG9r5nhW8WO7Bx4Ad/jo4/MEsOzmSJE3pxHZUfI6CPgqxkbu1m7I3DEPS5X+mBr18iou8y5r8UUD+zaNX8GxM3iHVq8u33/Cl3j5napkUIifsDqX1RywfQFjnuPDdDEQ/nl01HDdhtGYv29hngDH6eKrg7gK7x83IZ4pw66s44WO9qNcr+oWZBCvKugkRsTJTBb7XzObMSC0Jc9dDo90Jy6qaKa40Hb0Z+/I6OdIkRl3vQeXV/taC0tTh5t8neKYPjm4rW5demjeYBBqTFRaBSYQ6Dh5/yr3bI1egJOHBYidF8fcBgUCvZJ5KXGtReX9gaH6GpJ+5/k/otmikv1bEIDZymPp+CCP1x3po+xrz5jNToWoxpEk+k7kjHwOU/16LGtJm8L9lzaiRcsXijg7E5itTXdkdWRHTmkMVE+TlQnSx5emRY7PWuSLXCjWt7KhKeHbQe2hwbJeyhjuzWVFBFs3k/XV+3kWsUzf0p0cfuLSzhES6uO+Ilvrc5lSsxUtvctlM5tanHJ2g8xiw+RWzB/AWH89K8=
   on:
     tags: true
-    repo: eden-js/shop-stripe
+    repo: ifactorydigital/ifactoryjs_shop-stripe
