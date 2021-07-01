@@ -157,12 +157,13 @@ class StripeController extends Controller {
    * @return {Promise}
    */
   async payHook(payment) {
+    console.log('payHook');
     // Check super
     if (payment.get('method.type') !== 'stripe') return;
 
     // set source
     let source = null;
-
+    console.log(payment.get('method.request'));
     // check if normal payment request api
     if (payment.get('method.request')) {
       // is payment request api
@@ -171,6 +172,8 @@ class StripeController extends Controller {
       // Set source
       source = await this._createSource(payment);
     }
+    console.log('source============');
+    console.log(source);
 
     // Check source
     if (!source) return;
@@ -190,10 +193,10 @@ class StripeController extends Controller {
     const zeroDecimal = ['MGA', 'BIF', 'PYGI', 'XAF', 'XPF', 'CLP', 'KMF', 'RWF', 'DJF', 'KRW', 'GNF', 'JPY', 'VUV', 'VND', 'XOF'];
 
     // Run try/catch
-    try {
+    //try {
       // get real total
       let realTotal = payment.get('amount');
-
+  
       // get subscriptions
       if (subscriptions && subscriptions.length) {
         // let items
@@ -332,7 +335,8 @@ class StripeController extends Controller {
         // return
         return;
       }
-
+      console.log('aaaaaaaaaaaaaaaaaaaa');
+      console.log(payment);
       // create data
       const data = {
         currency,
@@ -350,10 +354,11 @@ class StripeController extends Controller {
         data.source = source.source;
         data.customer = source.customer;
       }
+      console.log(data);
 
       // Create chargs
       const charge = await this._stripe.charges.create(data);
-
+      console.log(charge);
       // Set charge
       payment.set('data', {
         charge,
@@ -361,6 +366,7 @@ class StripeController extends Controller {
 
       // Set complete
       payment.set('complete', true);
+    /*
     } catch (e) {
       // Set error
       payment.set('error', {
@@ -371,6 +377,7 @@ class StripeController extends Controller {
       // Set not complete
       payment.set('complete', false);
     }
+    */
   }
 
 
@@ -408,6 +415,7 @@ class StripeController extends Controller {
    * @private
    */
   async _createSource(payment) {
+    console.log('_createSource');
     // Set method
     const method = payment.get('method.data');
 
@@ -418,7 +426,7 @@ class StripeController extends Controller {
     let data = user && await Data.findOne({
       'user.id' : user.get('_id').toString(),
     });
-
+    console.log(method);
     // Check card id
     if (method.card.id) {
       // Check user
@@ -437,7 +445,7 @@ class StripeController extends Controller {
         // Return card id check
         return c.id === method.card.id;
       });
-
+      console.log(card);
       // Check data
       if (!card) {
         // Set error
@@ -458,7 +466,7 @@ class StripeController extends Controller {
     }
 
     // Try/catch
-    try {
+    //try {
       // Set customer
       const customer = data ? data.get('customer') : (await this._stripe.customers.create({
         email : user ? user.get('email') : 'anonymous',
@@ -475,7 +483,8 @@ class StripeController extends Controller {
 
       // Set req
       const req = method.card;
-
+      console.log('req');
+      console.log(req);
       // Create card
       const card = await this._stripe.customers.createSource(customer, {
         source : {
@@ -487,7 +496,7 @@ class StripeController extends Controller {
           exp_month : req.expiry.month,
         },
       });
-
+      console.log(card);
       // Check save
       if (method.save && data) {
         // Set cards
@@ -515,6 +524,7 @@ class StripeController extends Controller {
         source   : card.id,
         customer,
       };
+    /*
     } catch (e) {
       // Set error
       payment.set('error', {
@@ -525,6 +535,7 @@ class StripeController extends Controller {
       // Return false
       return false;
     }
+    */
   }
 }
 
